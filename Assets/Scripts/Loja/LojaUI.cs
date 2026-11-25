@@ -10,9 +10,12 @@ public class LojaUI : MonoBehaviour
 
     private bool montado;
 
+    public ItemLoja[] Itens => itens;
+
     private void Start()
     {
         Montar();
+        BotoesTesteMoedas.Criar(this);   // + moedas e resetar poderes, só no Editor / Development Build
     }
 
     private void Montar()

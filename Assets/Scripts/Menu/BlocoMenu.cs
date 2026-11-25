@@ -49,6 +49,26 @@ public class BlocoMenu : MonoBehaviour, IPointerEnterHandler, ISelectHandler, ID
         if (subtitulo != null) subtitulo.text = texto;
     }
 
+    // Usado por quem cria blocos por código (ex.: botões de teste da loja)
+    public void DefinirTextos(string novoTitulo, string novoSubtitulo, string novaDescricao)
+    {
+        if (titulo != null) titulo.text = novoTitulo;
+        if (subtitulo != null) subtitulo.text = novoSubtitulo;
+        descricao = novaDescricao;
+    }
+
+    public void DefinirCor(Color cor)
+    {
+        corFundo = cor;
+        if (fundo != null) fundo.color = cor;
+    }
+
+    public void DefinirIcone(Sprite sprite)
+    {
+        Image img = icone != null ? icone.GetComponent<Image>() : null;
+        if (img != null && sprite != null) img.sprite = sprite;
+    }
+
     // O mouse também seleciona: assim mouse e teclado nunca destacam dois blocos ao mesmo tempo
     public void OnPointerEnter(PointerEventData dados)
     {

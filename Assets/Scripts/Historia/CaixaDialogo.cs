@@ -11,6 +11,7 @@ using UnityEngine.InputSystem;
 // Caixa de diálogo estilo Pokémon antigo: o texto aparece letra por letra com um bipe de "voz",
 // o retrato e o nome de quem fala ficam do lado, e uma setinha pisca quando dá para continuar.
 // ENTER / ESPAÇO / E / Z (ou clique) completam o texto ou passam para a próxima fala.
+// Segurar ESC pula o resto da conversa (só os textos: o roteiro da cena continua igual).
 // A interface é montada por Mr Driver > História (fica no CanvasHistoria).
 public class CaixaDialogo : MonoBehaviour
 {
@@ -33,6 +34,9 @@ public class CaixaDialogo : MonoBehaviour
     [SerializeField] private float pausaPonto = 0.18f;        // depois de . ! ?
     [SerializeField] private float pausaVirgula = 0.07f;
 
+    [Header("Pular conversa (segurar ESC)")]
+    [SerializeField] private float segundosParaPular = 0.5f;
+
     [Header("Som (opcional)")]
     [SerializeField] private AudioSource voz;
     [SerializeField, Range(0f, 1f)] private float volumeVoz = 0.35f;
@@ -45,6 +49,11 @@ public class CaixaDialogo : MonoBehaviour
     private Vector2 posicaoJanela;
     private AudioClip bipe;
     private float alturaSeta;
+
+    private bool pulando;          // o jogador segurou ESC: o resto das falas é ignorado
+    private float tempoEsc;
+    private GameObject dicaPular;  // "Segure ESC para pular" + barrinha (criados pelo código)
+    private RectTransform barraPular;
 
     public static CaixaDialogo Instancia
     {
@@ -68,6 +77,79 @@ public class CaixaDialogo : MonoBehaviour
         if (painel != null) painel.SetActive(false);
         bipe = CriarBipe();
         if (voz != null) voz.playOnAwake = false;
+        CriarDicaPular();
+    }
+
+    // Conta quanto tempo o ESC está segurado durante uma conversa
+    private void Update()
+    {
+        if (!aberta || pulando)
+        {
+            tempoEsc = 0f;
+            return;
+        }
+
+        tempoEsc = SegurandoEsc() ? tempoEsc + Time.unscaledDeltaTime : 0f;
+        float progresso = segundosParaPular > 0f ? Mathf.Clamp01(tempoEsc / segundosParaPular) : 1f;
+        if (barraPular != null) barraPular.localScale = new Vector3(progresso, 1f, 1f);
+
+        if (progresso >= 1f)
+        {
+            pulando = true;
+            Sons.Tocar("DialogoAvancar");
+        }
+    }
+
+    private void CriarDicaPular()
+    {
+        if (janela == null || texto == null) return;
+
+        dicaPular = new GameObject("DicaPular", typeof(RectTransform));
+        RectTransform rt = dicaPular.GetComponent<RectTransform>();
+        rt.SetParent(janela, false);
+        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(1f, 1f);
+        rt.anchoredPosition = new Vector2(-28f, -14f);
+        rt.sizeDelta = new Vector2(320f, 34f);
+
+        TextMeshProUGUI dica = new GameObject("Texto", typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<TextMeshProUGUI>();
+        dica.rectTransform.SetParent(rt, false);
+        dica.rectTransform.anchorMin = Vector2.zero;
+        dica.rectTransform.anchorMax = Vector2.one;
+        dica.rectTransform.offsetMin = dica.rectTransform.offsetMax = Vector2.zero;
+        dica.font = texto.font;
+        dica.fontSize = Mathf.Max(14f, texto.fontSize * 0.45f);
+        dica.alignment = TextAlignmentOptions.TopRight;
+        dica.color = new Color(1f, 1f, 1f, 0.55f);
+        dica.text = "Segure ESC para pular";
+        dica.raycastTarget = false;
+
+        Image fundo = new GameObject("Barra", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+        fundo.rectTransform.SetParent(rt, false);
+        fundo.rectTransform.anchorMin = fundo.rectTransform.anchorMax = fundo.rectTransform.pivot = new Vector2(1f, 0f);
+        fundo.rectTransform.anchoredPosition = Vector2.zero;
+        fundo.rectTransform.sizeDelta = new Vector2(150f, 5f);
+        fundo.color = new Color(1f, 1f, 1f, 0.18f);
+        fundo.raycastTarget = false;
+
+        Image cheia = new GameObject("Progresso", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+        barraPular = cheia.rectTransform;
+        barraPular.SetParent(fundo.rectTransform, false);
+        barraPular.anchorMin = Vector2.zero;
+        barraPular.anchorMax = new Vector2(0f, 1f);
+        barraPular.pivot = new Vector2(0f, 0.5f);
+        barraPular.sizeDelta = new Vector2(150f, 0f);
+        barraPular.anchoredPosition = Vector2.zero;
+        barraPular.localScale = new Vector3(0f, 1f, 1f);
+        cheia.color = new Color(1f, 0.85f, 0.25f, 0.9f);
+        cheia.raycastTarget = false;
+
+        dicaPular.SetActive(false);
+    }
+
+    private void MostrarDicaPular(bool mostrar)
+    {
+        if (barraPular != null) barraPular.localScale = new Vector3(0f, 1f, 1f);
+        if (dicaPular != null) dicaPular.SetActive(mostrar);
     }
 
     private void OnDisable()
@@ -99,6 +181,9 @@ public class CaixaDialogo : MonoBehaviour
 
         aberta = true;
         abertas.Add(this);
+        pulando = false;
+        tempoEsc = 0f;
+        MostrarDicaPular(true);
 
         float tempoAntes = Time.timeScale;
         if (pausarJogo) Time.timeScale = 0f;
@@ -110,10 +195,13 @@ public class CaixaDialogo : MonoBehaviour
 
         foreach (Fala fala in falas)
         {
+            if (pulando) break;
             if (fala == null || string.IsNullOrEmpty(fala.texto)) continue;
             yield return Escrever(fala, true);
         }
 
+        MostrarDicaPular(false);
+        if (pulando && seta != null) seta.gameObject.SetActive(false);
         yield return Animar(1f, 0f, 0.15f);
         painel.SetActive(false);
 
@@ -122,6 +210,7 @@ public class CaixaDialogo : MonoBehaviour
 
         abertas.Remove(this);
         aberta = false;
+        pulando = false;
         yield return null;   // a tecla que fechou a conversa não vale para o jogo no mesmo frame
     }
 
@@ -199,6 +288,7 @@ public class CaixaDialogo : MonoBehaviour
         int visiveis = 0;
         while (visiveis < total)
         {
+            if (esperarTecla && pulando) yield break;
             if (esperarTecla && Avancou()) { visiveis = total; break; }
 
             acumulado += Time.unscaledDeltaTime * letrasPorSegundo * (Segurando() ? 2.5f : 1f);
@@ -225,6 +315,7 @@ public class CaixaDialogo : MonoBehaviour
         yield return null;
         while (!Avancou())
         {
+            if (pulando) yield break;
             if (seta != null)
                 seta.anchoredPosition = new Vector2(seta.anchoredPosition.x,
                     alturaSeta + (Mathf.Repeat(Time.unscaledTime * 2f, 1f) < 0.5f ? 0f : -6f));
@@ -342,6 +433,16 @@ public class CaixaDialogo : MonoBehaviour
         return Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter) ||
                Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.E) ||
                Input.GetKeyDown(KeyCode.Z) || Input.GetMouseButtonDown(0);
+#endif
+    }
+
+    private static bool SegurandoEsc()
+    {
+#if ENABLE_INPUT_SYSTEM
+        Keyboard t = Keyboard.current;
+        return t != null && t.escapeKey.isPressed;
+#else
+        return Input.GetKey(KeyCode.Escape);
 #endif
     }
 
