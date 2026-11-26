@@ -365989,7 +365989,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1148638606068996648, guid: a2dddcde8b5e36744a0ea19e06ec292e, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -370325,6 +370325,7 @@ MonoBehaviour:
   letrasPorSegundo: 45
   pausaPonto: 0.18
   pausaVirgula: 0.07
+  segundosParaPular: 0.5
   voz: {fileID: 1951244013}
   volumeVoz: 0.35
 --- !u!224 &1951244018
@@ -373563,7 +373564,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &2081745458
 Transform:
   m_ObjectHideFlags: 0

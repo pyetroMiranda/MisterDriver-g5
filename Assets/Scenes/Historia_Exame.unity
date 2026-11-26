@@ -355936,6 +355936,7 @@ MonoBehaviour:
   letrasPorSegundo: 45
   pausaPonto: 0.18
   pausaVirgula: 0.07
+  segundosParaPular: 0.5
   voz: {fileID: 1128790041}
   volumeVoz: 0.35
 --- !u!82 &1128790041
@@ -374055,7 +374056,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &2081745458
 Transform:
   m_ObjectHideFlags: 0

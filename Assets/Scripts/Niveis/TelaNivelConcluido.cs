@@ -38,6 +38,7 @@ public class TelaNivelConcluido : MonoBehaviour
 
     private bool aberta;
     private bool saindo;
+    private bool gameOver;   // a mesma tela serve para "GAME OVER" (botão principal = tentar de novo)
     private string cenaSeguinte;
 
     public bool Aberta => aberta;
@@ -77,6 +78,32 @@ public class TelaNivelConcluido : MonoBehaviour
         if (principal != null) principal.Select();
     }
 
+    // Game over (ex.: carteira suspensa): mesma janela, botão principal recomeça a fase
+    public void MostrarGameOver(string tituloGameOver, string mensagem)
+    {
+        if (aberta || painel == null) return;
+        gameOver = true;
+        Time.timeScale = 0f;
+        Sons.TocarVinheta(Sons.Vinheta.Derrota);
+
+        if (textoTitulo != null) textoTitulo.text = tituloGameOver;
+        if (textoMensagem != null) textoMensagem.text = mensagem;
+        if (textoMoedas != null) textoMoedas.gameObject.SetActive(false);
+        if (botaoProximo != null)
+        {
+            botaoProximo.gameObject.SetActive(true);
+            botaoProximo.onClick.RemoveListener(IrParaProximo);
+            botaoProximo.onClick.AddListener(JogarNovamente);
+            TMP_Text rotulo = botaoProximo.GetComponentInChildren<TMP_Text>(true);
+            if (rotulo != null) rotulo.text = "TENTAR DE NOVO";
+        }
+
+        painel.SetActive(true);
+        aberta = true;
+        StartCoroutine(Entrar());
+        if (botaoProximo != null) botaoProximo.Select();
+    }
+
     private void Update()
     {
         if (!aberta || saindo) return;
@@ -89,7 +116,8 @@ public class TelaNivelConcluido : MonoBehaviour
 #endif
         if (!enter) return;
 
-        if (botaoProximo != null && botaoProximo.gameObject.activeSelf) IrParaProximo();
+        if (gameOver) JogarNovamente();
+        else if (botaoProximo != null && botaoProximo.gameObject.activeSelf) IrParaProximo();
         else IrParaMenu();
     }
 
